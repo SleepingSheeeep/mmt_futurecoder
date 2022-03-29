@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.nn import functional as F
 
 from fairseq import utils
 from fairseq.dataclass.utils import gen_parser_from_dataclass
