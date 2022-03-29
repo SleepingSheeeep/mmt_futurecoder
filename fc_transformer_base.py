@@ -100,7 +100,7 @@ class FutureContextTransformerModelBase(FairseqEncoderDecoderModel):
             cfg.checkpoint_activations = True  # offloading implies checkpointing
         encoder = cls.build_encoder(cfg, src_dict, encoder_embed_tokens)
         decoder = cls.build_decoder(cfg, tgt_dict, decoder_embed_tokens)
-        # TODO 这里添加futurecoder
+        # 这里添加futurecoder
         futurecoder = cls.build_futurecoder(cfg, tgt_dict, decoder_embed_tokens)
 
         if not cfg.share_all_embeddings:
@@ -137,7 +137,7 @@ class FutureContextTransformerModelBase(FairseqEncoderDecoderModel):
 
     @classmethod
     def build_futurecoder(cls, cfg, tgt_dict, embed_tokens):
-        # TODO 定义futurecoder层
+        # 定义futurecoder层
         return TransformerFuturecoderBase(
             cfg,
             tgt_dict,

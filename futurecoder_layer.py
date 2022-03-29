@@ -198,7 +198,6 @@ class TransformerFuturecoderLayerBase(nn.Module):
 
         decoder_out = x
 
-        # TODO 这里修改相关代码
         # query=decoder output
         # key and value=img_feature
         residual = x
@@ -229,7 +228,7 @@ class TransformerFuturecoderLayerBase(nn.Module):
         # for futurecoder loss (seq_len, batch, embed_dim)
         
 
-        # TODO 在这里加GRU或LSTM,并输出loss
+        # 在这里加GRU或LSTM,并输出loss
 #         Logger.info("GRU之前x.shape：{} and decoder_out: {}".format(x.shape, decoder_out.shape))
 
         x, _ = self.GRU(x, decoder_out)
