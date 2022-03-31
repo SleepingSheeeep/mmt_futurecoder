@@ -229,17 +229,22 @@ class TransformerFuturecoderLayerBase(nn.Module):
         
 
         # 在这里加GRU或LSTM,并输出loss
-#         Logger.info("GRU之前x.shape：{} and decoder_out: {}".format(x.shape, decoder_out.shape))
+        # Logger.info("GRU之前x.shape：{} and decoder_out: {}".format(x.shape, decoder_out.shape))
+
+        x4lfd = x
+        if self.normalize_before:
+            x4lfd = self.final_layer_norm(x4lfd)
+        x4lfd = self.activation_fn(self.fc1(x4lfd))
+        x4lfd = self.activation_dropout_module(x4lfd)
+        x4lfd = self.fc2(x4lfd)
 
         x, _ = self.GRU(x, decoder_out)
         x = x.cuda()
-        
-        x4lfd = x
-        
-        # x, _ = self.GRU(x, decoder_out)
-#         Logger.info("GRU之后x.shape：{}".format(x))
 
-        residual = x
+        # x, _ = self.GRU(x, decoder_out)
+        # Logger.info("GRU之后x.shape：{}".format(x))
+
+        residual = decoder_out
         if self.normalize_before:
             x = self.final_layer_norm(x)
         x = self.activation_fn(self.fc1(x))
