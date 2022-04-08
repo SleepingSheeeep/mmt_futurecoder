@@ -17,6 +17,7 @@ from fairseq.models.transformer import (
 from mmt_future_context.GRU import GRUModel
 
 import logging
+
 Logger = logging.getLogger(__name__)
 
 
@@ -38,7 +39,7 @@ class TransformerFuturecoderLayerBase(nn.Module):
     def __init__(self, cfg, return_fc=False):
         super().__init__()
         self.cfg = cfg
-        self.GRU = GRUModel(256,256,256)
+        self.GRU = GRUModel(256, 256, 256)
         self.return_fc = return_fc
         self.embed_dim = cfg.encoder.embed_dim
         self.quant_noise = cfg.quant_noise.pq
@@ -165,11 +166,12 @@ class TransformerFuturecoderLayerBase(nn.Module):
                     del state_dict[k]
 
     def forward(
-        self,
-        x, # decoder_out
-        img_feature,
-        encoder_padding_mask: Optional[Tensor],
-        attn_mask: Optional[Tensor] = None,
+            self,
+            x,  # decoder_out
+            img_feature,
+            encoder_out,
+            encoder_padding_mask: Optional[Tensor],
+            attn_mask: Optional[Tensor] = None,
     ):
         """
         Args:
@@ -198,24 +200,36 @@ class TransformerFuturecoderLayerBase(nn.Module):
 
         decoder_out = x
 
-        # query=decoder output
-        # key and value=img_feature
+        img_feature = img_feature.transpose(0, 1)  # 这里img_feature变为(Token,Batch,Emebed)
+        img_padding = torch.zeros_like(img_feature)
+
+        decoder_out = torch.cat([decoder_out, img_padding], dim=0)
+        x = torch.cat([x, img_feature], dim=0)
+
+        # Logger.info("x: {}".format(x.shape))
+
+        # query=img_feature + decoder_out
+        # key and value=encoder_out
         residual = x
-        
-        #Logger.info("norm前的x：{}".format(x.shape))
+
+        # Logger.info("norm前的x：{}".format(x.shape))
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-#         Logger.info("future_layer中img_feature: {}".format(img_feature.shape))
-#         Logger.info("future_layer中decoder_out: {}".format(x.shape))
-        img_feature = img_feature.transpose(0, 1)
-#         Logger.info("future_layer后img_feature: {}".format(img_feature.shape))
-#         Logger.info("future_layer后decoder_out: {}".format(x.shape))
+        #         Logger.info("future_layer中img_feature: {}".format(img_feature.shape))
+        #         Logger.info("future_layer中decoder_out: {}".format(x.shape))
+
+        #Logger.info("future_layer后img_feature: {}".format(img_feature.shape))
+        #         Logger.info("future_layer后decoder_out: {}".format(x.shape))
+
+        enc = encoder_out["encoder_out"][0]
+
+        # Logger.info(len(enc))
 
         x, attn = self.self_attn(
             query=x,
-            key=img_feature,
-            value=img_feature,
+            key=enc,
+            value=enc,
             key_padding_mask=encoder_padding_mask,
             need_weights=False,
             attn_mask=None,
@@ -224,9 +238,8 @@ class TransformerFuturecoderLayerBase(nn.Module):
         x = self.residual_connection(x, residual)
         if not self.normalize_before:
             x = self.self_attn_layer_norm(x)
-            
+
         # for futurecoder loss (seq_len, batch, embed_dim)
-        
 
         # 在这里加GRU或LSTM,并输出loss
         # Logger.info("GRU之前x.shape：{} and decoder_out: {}".format(x.shape, decoder_out.shape))
@@ -242,7 +255,6 @@ class TransformerFuturecoderLayerBase(nn.Module):
         x, _ = self.GRU(x, decoder_out)
         x = x.cuda()
 
-        # x, _ = self.GRU(x, decoder_out)
         # Logger.info("GRU之后x.shape：{}".format(x))
 
         residual = decoder_out
@@ -258,7 +270,7 @@ class TransformerFuturecoderLayerBase(nn.Module):
         x = self.residual_connection(x, residual)
         if not self.normalize_before:
             x = self.final_layer_norm(x)
-            x = self.final_layer_norm(x)
+            x4lfd = self.final_layer_norm(x4lfd)
 
         if self.return_fc and not torch.jit.is_scripting():
             return x, attn, x4lfd, fc_result

@@ -221,6 +221,8 @@ class FutureContextTransformerModelBase(FairseqEncoderDecoderModel):
             prev_output_tokens,
             decoder_out,
             img_features,
+            # cat imgfeature
+            encoder_out = encoder_out,
             features_only=False,
             alignment_layer=alignment_layer,
             alignment_heads=alignment_heads,

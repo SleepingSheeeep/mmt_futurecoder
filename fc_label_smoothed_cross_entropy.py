@@ -42,15 +42,23 @@ class FCLabelSmoothedCrossEntropyCriterionConfig(FairseqDataclass):
 
 
 def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=True):
+    # logger.info(target)
+    # logger.info("target.shape:{}".format(target.shape))
+
     if target.dim() == lprobs.dim() - 1:
         target = target.unsqueeze(-1)
-#     logger.info(target.shape)
-#     logger.info(lprobs.shape)
+
     nll_loss = -lprobs.gather(dim=-1, index=target)
     smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
     if ignore_index is not None:
+        img_padding = torch.full((64, 1), False).cuda(0)
+        # ignore_index是<pad>的位置的索引，这里为1
+        # 这里的target为目标单词位置的索引，如果为1(<pad>)，则返回Ture,否则返回False
         pad_mask = target.eq(ignore_index)
+        # logger.info(pad_mask.shape)
+        # logger.info(nll_loss.shape)
         nll_loss.masked_fill_(pad_mask, 0.0)
+        pad_mask = torch.cat([pad_mask, img_padding], dim=0)
         smooth_loss.masked_fill_(pad_mask, 0.0)
     else:
         nll_loss = nll_loss.squeeze(-1)
@@ -92,7 +100,6 @@ class FutureContextLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         3) logging outputs to display while training
         """
 
-        # 这里的output应该有需要参与future_context计算的输出
         net_output = model(**sample["net_input"])
         loss, nll_loss= self.compute_loss(model, net_output, sample, reduce=reduce)
         sample_size = (
@@ -124,7 +131,7 @@ class FutureContextLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def compute_loss(self, model, net_output, sample, reduce=True):
         lprobs, target, lprobs_fc = self.get_lprobs_and_target(model, net_output, sample)
-#         logger.info(lprobs_fc.shape)
+        # logger.info(lprobs_fc.shape)
         loss, nll_loss = label_smoothed_nll_loss(
             lprobs,
             target,

@@ -20,7 +20,7 @@ from fairseq.modules import (
     PositionalEmbedding,
     SinusoidalPositionalEmbedding,
 )
-from mmt_future_context import futurecoder_layer
+from mmt_future_context import futurecoder_catimg_layer
 from fairseq.modules.checkpoint_activations import checkpoint_wrapper
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 from torch import Tensor
@@ -224,7 +224,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
             )
 
     def build_futurecoder_layer(self, cfg, no_encoder_attn=False):
-        layer = futurecoder_layer.TransformerFuturecoderLayerBase(cfg, no_encoder_attn)
+        layer = futurecoder_catimg_layer.TransformerFuturecoderLayerBase(cfg, no_encoder_attn)
         checkpoint = cfg.checkpoint_activations
         if checkpoint:
             offload_to_cpu = cfg.offload_activations
@@ -240,6 +240,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         prev_output_tokens,
         decoder_out,
         img_features,
+        encoder_out,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
         features_only: bool = False,
         full_context_alignment: bool = False,
@@ -271,6 +272,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
             prev_output_tokens,
             decoder_out,
             img_features,
+            encoder_out,
             incremental_state=incremental_state,
             full_context_alignment=full_context_alignment,
             alignment_layer=alignment_layer,
@@ -287,6 +289,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         prev_output_tokens,
         decoder_out,
         img_features,
+        encoder_out,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
         full_context_alignment: bool = False,
         alignment_layer: Optional[int] = None,
@@ -296,6 +299,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
             prev_output_tokens,
             decoder_out,
             img_features,
+            encoder_out,
             incremental_state,
             full_context_alignment,
             alignment_layer,
@@ -313,6 +317,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         prev_output_tokens,
         decoder_out,
         img_features,
+        encoder_out,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
         full_context_alignment: bool = False,
         alignment_layer: Optional[int] = None,
@@ -405,6 +410,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
             x, layer_attn, x4lfd, _ = layer(
                 decoder_out,
                 img_features,
+                encoder_out,
                 padding_mask,
                 # incremental_state,
                 # self_attn_mask=self_attn_mask,
