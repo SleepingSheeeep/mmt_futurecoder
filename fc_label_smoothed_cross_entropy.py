@@ -42,7 +42,7 @@ class FCLabelSmoothedCrossEntropyCriterionConfig(FairseqDataclass):
 
 
 def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=True):
-    # logger.info(target)
+    # logger.info(lprobs.shape)
     # logger.info("target.shape:{}".format(target.shape))
 
     if target.dim() == lprobs.dim() - 1:
@@ -51,14 +51,14 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     nll_loss = -lprobs.gather(dim=-1, index=target)
     smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
     if ignore_index is not None:
-        img_padding = torch.full((64, 1), False).cuda(0)
+        # img_padding = torch.full((64, 1), False).cuda(0)
         # ignore_index是<pad>的位置的索引，这里为1
         # 这里的target为目标单词位置的索引，如果为1(<pad>)，则返回Ture,否则返回False
         pad_mask = target.eq(ignore_index)
-        # logger.info(pad_mask.shape)
-        # logger.info(nll_loss.shape)
+        # logger.info("nll_loss:{}\n{}".format(nll_loss.shape, nll_loss))
+        # logger.info("smooth_loss:{}\n{}".format(smooth_loss.shape, smooth_loss))
         nll_loss.masked_fill_(pad_mask, 0.0)
-        pad_mask = torch.cat([pad_mask, img_padding], dim=0)
+        # pad_mask = torch.cat([pad_mask, img_padding], dim=0)
         smooth_loss.masked_fill_(pad_mask, 0.0)
     else:
         nll_loss = nll_loss.squeeze(-1)
@@ -147,6 +147,7 @@ class FutureContextLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             reduce=reduce,
         )
         loss = loss + self.w_4fc_loss * fc_loss
+        # 这里需不需要对nll_loss进行backward？
         nll_loss = nll_loss + self.w_4fc_loss * fc_nll_loss
         return loss, nll_loss
 

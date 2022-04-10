@@ -148,6 +148,10 @@ class TransformerFuturecoderLayerBase(nn.Module):
             qn_block_size=self.quant_noise_block_size,
         )
 
+    def trans_catimg_shape(self, input_dim, output_dim):
+        # x (Emebed, Batch, Token+1)
+        return nn.Linear(input_dim, output_dim)
+
     def residual_connection(self, x, residual):
         return residual + x
 
@@ -201,30 +205,38 @@ class TransformerFuturecoderLayerBase(nn.Module):
         decoder_out = x
 
         img_feature = img_feature.transpose(0, 1)  # 这里img_feature变为(Token,Batch,Emebed)
-        img_padding = torch.zeros_like(img_feature)
-
-        decoder_out = torch.cat([decoder_out, img_padding], dim=0)
         x = torch.cat([x, img_feature], dim=0)
 
+        # x (Token+1,Batch,Emebed)
+        x = x.transpose(0, 2)
+        m = nn.Linear(x.shape[2], x.shape[2] - 1).cuda(0)
+        x = m(x)
+        x = x.transpose(0, 2)
+
+        # trans_catimg_shape = self.trans_catimg_shape(x.shape[0], x.shape[0] - 1).cuda()
+
+        # x = trans_catimg_shape(x)
+        # x (Emebed, Batch, Token)
+        # x = x.transpose(0, 2)
+        # x (Token, Batch, Emebed)
+
+        # img_padding = torch.zeros_like(img_feature)
         # Logger.info("x: {}".format(x.shape))
 
-        # query=img_feature + decoder_out
-        # key and value=encoder_out
+        # query = img_feature + decoder_out
+        # key and value = encoder_out
         residual = x
 
         # Logger.info("norm前的x：{}".format(x.shape))
         if self.normalize_before:
             x = self.self_attn_layer_norm(x)
 
-        #         Logger.info("future_layer中img_feature: {}".format(img_feature.shape))
-        #         Logger.info("future_layer中decoder_out: {}".format(x.shape))
-
-        #Logger.info("future_layer后img_feature: {}".format(img_feature.shape))
-        #         Logger.info("future_layer后decoder_out: {}".format(x.shape))
+        # Logger.info("future_layer中img_feature: {}".format(img_feature.shape))
+        # Logger.info("future_layer中decoder_out: {}".format(x.shape))
+        # Logger.info("future_layer后img_feature: {}".format(img_feature.shape))
+        # Logger.info("future_layer后decoder_out: {}".format(x.shape))
 
         enc = encoder_out["encoder_out"][0]
-
-        # Logger.info(len(enc))
 
         x, attn = self.self_attn(
             query=x,
