@@ -38,7 +38,7 @@ class TransformerFuturecoderLayerBase(nn.Module):
     def __init__(self, cfg, return_fc=False):
         super().__init__()
         self.cfg = cfg
-        self.GRU = GRUModel(512,512,512)
+        self.GRU = GRUModel(256,256)
         self.return_fc = return_fc
         self.embed_dim = cfg.encoder.embed_dim
         self.quant_noise = cfg.quant_noise.pq
@@ -226,7 +226,6 @@ class TransformerFuturecoderLayerBase(nn.Module):
             x = self.self_attn_layer_norm(x)
             
         # for futurecoder loss (seq_len, batch, embed_dim)
-        
 
         # 在这里加GRU或LSTM,并输出loss
         # Logger.info("GRU之前x.shape：{} and decoder_out: {}".format(x.shape, decoder_out.shape))
@@ -238,7 +237,7 @@ class TransformerFuturecoderLayerBase(nn.Module):
         x4lfd = self.activation_dropout_module(x4lfd)
         x4lfd = self.fc2(x4lfd)
 
-        x, _ = self.GRU(x, decoder_out)
+        x, _ = self.GRU(x, decoder_out[-1])
         x = x.cuda()
 
         # x, _ = self.GRU(x, decoder_out)

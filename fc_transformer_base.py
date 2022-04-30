@@ -218,7 +218,6 @@ class FutureContextTransformerModelBase(FairseqEncoderDecoderModel):
         # img_features = img_features.reshape(img_features.shape[0], seq_lenth, -1)
 
         futurecoder_out = self.futurecoder(
-            prev_output_tokens,
             decoder_out,
             img_features,
             features_only=False,

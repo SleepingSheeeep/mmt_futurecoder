@@ -237,7 +237,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
 
     def forward(
         self,
-        prev_output_tokens,
         decoder_out,
         img_features,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
@@ -268,7 +267,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         """
 
         x, extra, x4lfd = self.extract_features(
-            prev_output_tokens,
             decoder_out,
             img_features,
             incremental_state=incremental_state,
@@ -284,7 +282,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
 
     def extract_features(
         self,
-        prev_output_tokens,
         decoder_out,
         img_features,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
@@ -293,7 +290,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         alignment_heads: Optional[int] = None,
     ):
         return self.extract_features_scriptable(
-            prev_output_tokens,
             decoder_out,
             img_features,
             incremental_state,
@@ -310,7 +306,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
 
     def extract_features_scriptable(
         self,
-        prev_output_tokens,
         decoder_out,
         img_features,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
@@ -337,7 +332,7 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
                 - the decoder's features of shape `(batch, tgt_len, embed_dim)`
                 - a dictionary with any model-specific outputs
         """
-        bs, slen = prev_output_tokens.size()
+        # bs, slen = prev_output_tokens.size()
 
         # logger.info(slen)
         img_features = self.img_embed(img_features)
@@ -357,50 +352,45 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
         #     padding_mask = encoder_out["encoder_padding_mask"][0]
 
         # embed positions
-        positions = None
-        if self.embed_positions is not None:
-            positions = self.embed_positions(
-                prev_output_tokens, incremental_state=incremental_state
-            )
-
-        if incremental_state is not None:
-            prev_output_tokens = prev_output_tokens[:, -1:]
-            if positions is not None:
-                positions = positions[:, -1:]
+        # positions = None
+        # if self.embed_positions is not None:
+        #     positions = self.embed_positions(
+        #         prev_output_tokens, incremental_state=incremental_state
+        #     )
+        #
+        # if incremental_state is not None:
+        #     prev_output_tokens = prev_output_tokens[:, -1:]
+        #     if positions is not None:
+        #         positions = positions[:, -1:]
 
         # embed tokens and positions
-        x = self.embed_scale * self.embed_tokens(prev_output_tokens)
+        # x = self.embed_scale * self.embed_tokens(prev_output_tokens)
+        #
+        # if self.quant_noise is not None:
+        #     x = self.quant_noise(x)
+        #
+        # if self.project_in_dim is not None:
+        #     x = self.project_in_dim(x)
+        #
+        # if positions is not None:
+        #     x += positions
+        #
+        # if self.layernorm_embedding is not None:
+        #     x = self.layernorm_embedding(x)
+        #
+        # x = self.dropout_module(x)
+        #
+        # # B x T x C -> T x B x C
+        # x = x.transpose(0, 1)
 
-        if self.quant_noise is not None:
-            x = self.quant_noise(x)
-
-        if self.project_in_dim is not None:
-            x = self.project_in_dim(x)
-
-        if positions is not None:
-            x += positions
-
-        if self.layernorm_embedding is not None:
-            x = self.layernorm_embedding(x)
-
-        x = self.dropout_module(x)
-
-        # B x T x C -> T x B x C
-        x = x.transpose(0, 1)
-
-        self_attn_padding_mask: Optional[Tensor] = None
-        if self.cross_self_attention or prev_output_tokens.eq(self.padding_idx).any():
-            self_attn_padding_mask = prev_output_tokens.eq(self.padding_idx)
+        # self_attn_padding_mask: Optional[Tensor] = None
+        # if self.cross_self_attention or prev_output_tokens.eq(self.padding_idx).any():
+        #     self_attn_padding_mask = prev_output_tokens.eq(self.padding_idx)
 
         # decoder layers
         attn: Optional[Tensor] = None
-        inner_states: List[Optional[Tensor]] = [x]
+        inner_states: List[Optional[Tensor]] = []
         for idx, layer in enumerate(self.layers):
-            if incremental_state is None and not full_context_alignment:
-                self_attn_mask = self.buffered_future_mask(x)
-            else:
-                self_attn_mask = None
-
 #             decoder_out = decoder_out.transpose(0, 1)
             x, layer_attn, x4lfd, _ = layer(
                 decoder_out,
@@ -437,7 +427,6 @@ class TransformerFuturecoderBase(FairseqIncrementalDecoder):
             x4lfd = self.project_out_dim(x4lfd)
 
         # logger.info(x.shape)
-
         return x, {"attn": [attn], "inner_states": inner_states}, x4lfd
 
     def output_layer(self, features):
